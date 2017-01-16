@@ -142,6 +142,7 @@ sub mbox_count {
           }
         }
         close($f);
+        $last_mailcount = ($unread, $read);
       }
     } else {
       opendir(DIR, "$mailfile/cur") or return 0;
@@ -181,8 +182,6 @@ sub mbox_count {
       closedir(DIR);
     }
   }
-
-  $last_mailcount = $unread;
 
   return ($unread, $read);
 }
