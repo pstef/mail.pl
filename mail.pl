@@ -37,11 +37,10 @@ my $old_is_not_new = 0;
 my $extprog;
 my ($last_refresh_time, $refresh_tag);
 
-# for mbox caching
-my ($last_size, $last_mtime, $last_mailcount, $last_mode);
-
 # list of mailboxes
 my %mailboxes = (); 
+my %cached_counters = ();
+my %mtimes = ();
 my %new_mails_in_box = ();
 my $nummailboxes = 0; 
 
@@ -115,9 +114,8 @@ sub mbox_count {
       my $mtime = $stat[9];
 
       # if the file hasn't changed, get the count from cache
-      return $last_mailcount if ($last_size == $size && $last_mtime == $mtime);
-      $last_size = $size;
-      $last_mtime = $mtime;
+      return $cached_counters{$mailfile} if ($mtimes{$mailfile} == ($size, $mtime));
+      $mtimes{$mailfile} = ($size, $mtime);
 
       return 0 if (!open(my $f, "<", $mailfile));
 
@@ -144,7 +142,7 @@ sub mbox_count {
         }
       }
       close($f);
-      $last_mailcount = ($unread, $read);
+      $cached_counters{$mailfile} = ($unread, $read);
     }
     return ($unread, $read);
   }
@@ -158,7 +156,7 @@ sub mbox_count {
     # 
     # deleted mail
     next if $file =~ /\:.*?T.*?$/;
-      if ($old_is_not_new) {
+    if ($old_is_not_new) {
       # when mail gets moved from new to cur it's name _always_
       # changes from uniq to uniq:info, even when it's still not
       # read. I assume "old mail" means mail which hasn't been read
@@ -363,14 +361,11 @@ sub init_mailboxes {
 sub read_settings {
   $extprog = Irssi::settings_get_str('mail_ext_program');
   my $time = Irssi::settings_get_int('mail_refresh_time');
-  my $mode = Irssi::settings_get_bool('maildir_mode');
   unless ($time == $last_refresh_time) {
      $last_refresh_time = $time;
      Irssi::timeout_remove($refresh_tag) if ($refresh_tag);
      $refresh_tag = Irssi::timeout_add($time*1000, 'refresh_mail', undef);
   }
-  return if ($mode == $last_mode);
-  $last_mode = $mode;
   refresh_mail;
 }
 
