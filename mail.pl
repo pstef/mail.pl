@@ -182,13 +182,6 @@ sub mbox_count {
     }
   }
 
-  if ($unread eq "" || $unread < 0) {
-    $unread = 0;
-  }
-  if ($read eq "" || $read < 0) {
-    $read = 0;
-  }
-
   $last_mailcount = $unread;
 
   return ($unread, $read);
