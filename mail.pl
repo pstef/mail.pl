@@ -32,7 +32,6 @@ $VERSION = "2.92";
 use Irssi::TextUI;
 use Irssi;
 
-my $maildirmode = 0; # maildir=1, file(spools)=0
 my $old_is_not_new = 0; 
 my $extprog;
 my ($last_refresh_time, $refresh_tag);
@@ -61,10 +60,6 @@ sub cmd_print_help {
   "/MAILBOX SHOW\n".
   "    - Shows a list of the defined mailboxes.\n\n".
   "Use the following commands to change the behaviour:\n\n".
-  "/SET MAILDIRMODE on|off\n".
-  "    - If maildirmode is on, the mailboxes in the list are assumed to be ".
-  "directories. Otherwise they are assumed to be spool files.\n".
-  "      Default: off.\n".
   "/SET MAIL_OLDNOTNEW on|off\n".
   "    - If switched on, mail marked als \"OLD\" will not be treated as new.\n".
   "      Default: off.\n".
@@ -97,7 +92,6 @@ sub mbox_count {
   my $mailfile = shift;
   my $unread = 0;
   my $read = 0;
-  my $maildirmode=Irssi::settings_get_bool('maildir_mode');
   my $old_is_not_new=Irssi::settings_get_bool('mail_oldnotnew');
 
   if ($extprog ne "") {
@@ -107,43 +101,41 @@ sub mbox_count {
      return ($unread, $read);
   }
 
-  if (!$maildirmode) {
-    if (-f $mailfile) {
-      my @stat = stat($mailfile);
-      my $size = $stat[7];
-      my $mtime = $stat[9];
+  if (-f $mailfile) {
+    my @stat = stat($mailfile);
+    my $size = $stat[7];
+    my $mtime = $stat[9];
 
-      # if the file hasn't changed, get the count from cache
-      return $cached_counters{$mailfile} if ($mtimes{$mailfile} == ($size, $mtime));
-      $mtimes{$mailfile} = ($size, $mtime);
+    # if the file hasn't changed, get the count from cache
+    return $cached_counters{$mailfile} if ($mtimes{$mailfile} == ($size, $mtime));
+    $mtimes{$mailfile} = ($size, $mtime);
 
-      return 0 if (!open(my $f, "<", $mailfile));
+    return 0 if (!open(my $f, "<", $mailfile));
 
-      # count new mails only
-      my $internal_removed = 0;
-      while (<$f>) {
-        $unread++ if (/^From /);
+    # count new mails only
+    my $internal_removed = 0;
+    while (<$f>) {
+      $unread++ if (/^From /);
 
-        if (!$old_is_not_new) {
-          $unread-- if (/^Status: R/);
-        } else {
-          $unread-- if (/^Status: [OR]/);
-        }
+      if (!$old_is_not_new) {
+        $unread-- if (/^Status: R/);
+      } else {
+        $unread-- if (/^Status: [OR]/);
+      }
 
-        $read++ if (/^From /);
+      $read++ if (/^From /);
 
-        # Remove folder internal data, but only once
-        if (/^Subject: .*FOLDER INTERNAL DATA/) {
-          if ($internal_removed == 0) {
-            $internal_removed = 1;
-            $read--;
-            $unread--;
-          }
+      # Remove folder internal data, but only once
+      if (/^Subject: .*FOLDER INTERNAL DATA/) {
+        if ($internal_removed == 0) {
+          $internal_removed = 1;
+          $read--;
+          $unread--;
         }
       }
-      close($f);
-      $cached_counters{$mailfile} = ($unread, $read);
     }
+    close($f);
+    $cached_counters{$mailfile} = ($unread, $read);
     return ($unread, $read);
   }
 
@@ -369,24 +361,15 @@ sub read_settings {
   refresh_mail;
 }
 
-
-if (!$maildirmode) {
-  my $default = "1=" . $ENV{'MAIL'} . ",";
-  Irssi::settings_add_str('misc', 'mail_mailboxes', $default);
-} else {
-  my $default = "1=~/Maildir/,";
-  Irssi::settings_add_str('misc', 'mail_mailboxes', $default);
-}
-
 Irssi::command_bind('mailbox show', 'cmd_showmailboxes');
 Irssi::command_bind('mailbox add', 'cmd_addmailbox');
 Irssi::command_bind('mailbox del', 'cmd_delmailbox');
 Irssi::command_bind('mailbox help', 'cmd_print_help');
 Irssi::command_bind('mailbox', 'cmd_mailboxes');
 
+Irssi::settings_add_str('misc', 'mail_mailboxes', "1=" . $ENV{'MAIL'} . ",");
 Irssi::settings_add_str('misc', 'mail_ext_program', '');
 Irssi::settings_add_int('misc', 'mail_refresh_time', 60);
-Irssi::settings_add_bool('misc', 'maildir_mode', "$maildirmode");
 Irssi::settings_add_bool('misc', 'mail_oldnotnew', "$old_is_not_new");
 Irssi::settings_add_str('misc', 'mail_separator', ",");
 Irssi::settings_add_bool('misc', 'mail_show_message', "0");
