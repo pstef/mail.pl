@@ -109,39 +109,39 @@ sub mbox_count {
     if (!$maildirmode) {
       if (-f $mailfile) {
         my @stat = stat($mailfile);
-	my $size = $stat[7];
-	my $mtime = $stat[9];
+        my $size = $stat[7];
+        my $mtime = $stat[9];
 
-	# if the file hasn't changed, get the count from cache
-	return $last_mailcount if ($last_size == $size && $last_mtime == $mtime);
-	$last_size = $size;
-	$last_mtime = $mtime;
+        # if the file hasn't changed, get the count from cache
+        return $last_mailcount if ($last_size == $size && $last_mtime == $mtime);
+        $last_size = $size;
+        $last_mtime = $mtime;
 
-	return 0 if (!open(my $f, "<", $mailfile));
+        return 0 if (!open(my $f, "<", $mailfile));
 
-	# count new mails only
-	my $internal_removed = 0;
-	while (<$f>) {
-	  $unread++ if (/^From /);
+        # count new mails only
+        my $internal_removed = 0;
+        while (<$f>) {
+          $unread++ if (/^From /);
 
-	  if(!$old_is_not_new) {
-	  	$unread-- if (/^Status: R/);
-	  } else {
-	  	$unread-- if (/^Status: [OR]/);
-	  }
+          if (!$old_is_not_new) {
+            $unread-- if (/^Status: R/);
+          } else {
+            $unread-- if (/^Status: [OR]/);
+          }
 
-	  $read++ if (/^From /);
+          $read++ if (/^From /);
 
-	  # Remove folder internal data, but only once
-	  if (/^Subject: .*FOLDER INTERNAL DATA/) {
-	    if ($internal_removed == 0) {
-	      $internal_removed = 1;
-	      $read--;
-	      $unread--;
-	    }
-	  }
-	}
-	close($f);
+          # Remove folder internal data, but only once
+          if (/^Subject: .*FOLDER INTERNAL DATA/) {
+            if ($internal_removed == 0) {
+              $internal_removed = 1;
+              $read--;
+              $unread--;
+            }
+          }
+        }
+        close($f);
       }
     } else {
       opendir(DIR, "$mailfile/cur") or return 0;
@@ -153,21 +153,21 @@ sub mbox_count {
         # 
         # deleted mail
         next if $file =~ /\:.*?T.*?$/;
-	    if($old_is_not_new) {
-           # when mail gets moved from new to cur it's name _always_
-           # changes from uniq to uniq:info, even when it's still not
-           # read. I assume "old mail" means mail which hasn't been read
-           # yet but it has been "acknowledged" by the user. (it's been
-           # moved to cur) -qvr
-           if ($file =~ /\:.*?$/) {
-              $read++;
-      		  next;
-           }
+          if ($old_is_not_new) {
+          # when mail gets moved from new to cur it's name _always_
+          # changes from uniq to uniq:info, even when it's still not
+          # read. I assume "old mail" means mail which hasn't been read
+          # yet but it has been "acknowledged" by the user. (it's been
+          # moved to cur) -qvr
+          if ($file =~ /\:.*?$/) {
+            $read++;
+            next;
+          }
         } else {
-           if ($file =~ /\:.*?S.*?$/) {
-              $read++;
-      		  next;
-           }
+          if ($file =~ /\:.*?S.*?$/) {
+            $read++;
+            next;
+          }
         }
         $unread++;
       }
