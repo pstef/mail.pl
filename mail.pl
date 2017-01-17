@@ -107,8 +107,8 @@ sub mbox_count {
     my $mtime = $stat[9];
 
     # if the file hasn't changed, get the count from cache
-    return @cached_counters{$mailfile} if (@mtimes{$mailfile} == ($size, $mtime));
-    @mtimes{$mailfile} = ($size, $mtime);
+    return @{$cached_counters{$mailfile}} if $mtimes{$mailfile}[0] == $size and $mtimes{$mailfile}[1] == $mtime;
+    $mtimes{$mailfile} = [$size, $mtime];
 
     return 0 if (!open(my $f, "<", $mailfile));
 
@@ -135,7 +135,7 @@ sub mbox_count {
       }
     }
     close($f);
-    @cached_counters{$mailfile} = ($unread, $read);
+    $cached_counters{$mailfile} = [$unread, $read];
     return ($unread, $read);
   }
 
